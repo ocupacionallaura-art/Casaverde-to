@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 
 const C = {
   dark: "#1E3A2F", mid: "#2F5741", sage: "#5A8C6E", light: "#A8C5B0",
@@ -141,7 +141,10 @@ const isHourAvailable = (therapist, day, hour, month) => {
   return h >= from && h <= to;
 };
 
-// ── Persistencia local ──────────────────────────────────────────────────────
+// ── Persistencia local + Supabase ───────────────────────────────────────────
+const SUPA_URL = "https://rgopwfgbdwdsvmowogit.supabase.co";
+const SUPA_KEY = "sb_publishable_2CpkE8EWq26RGc9l-96bww_SmlHYbWg";
+
 const saveToStorage = (key, data) => {
   try { localStorage.setItem(key, JSON.stringify(data)); } catch(e) {}
 };
@@ -151,6 +154,54 @@ const loadFromStorage = (key) => {
     const raw = localStorage.getItem(key);
     return raw ? JSON.parse(raw) : null;
   } catch(e) { return null; }
+};
+
+// Sync to Supabase (fire and forget)
+const syncPatients = async (patients) => {
+  try {
+    // Upsert all patients
+    await fetch(`${SUPA_URL}/rest/v1/patients`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPA_KEY,
+        "Authorization": `Bearer ${SUPA_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates,return=minimal"
+      },
+      body: JSON.stringify(patients)
+    });
+  } catch(e) {}
+};
+
+const syncSchedule = async (monthKey, data) => {
+  try {
+    await fetch(`${SUPA_URL}/rest/v1/schedules`, {
+      method: "POST",
+      headers: {
+        "apikey": SUPA_KEY,
+        "Authorization": `Bearer ${SUPA_KEY}`,
+        "Content-Type": "application/json",
+        "Prefer": "resolution=merge-duplicates,return=minimal"
+      },
+      body: JSON.stringify([{ month_key: monthKey, data: data, updated_at: new Date().toISOString() }])
+    });
+  } catch(e) {}
+};
+
+const loadFromSupabase = async () => {
+  try {
+    const [pRes, sRes] = await Promise.all([
+      fetch(`${SUPA_URL}/rest/v1/patients?select=*&order=therapist,name`, {
+        headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` }
+      }),
+      fetch(`${SUPA_URL}/rest/v1/schedules?select=*`, {
+        headers: { "apikey": SUPA_KEY, "Authorization": `Bearer ${SUPA_KEY}` }
+      })
+    ]);
+    const patients = await pRes.json();
+    const schedules = await sRes.json();
+    return { patients: patients?.length ? patients : null, schedules: schedules?.length ? schedules : null };
+  } catch(e) { return { patients: null, schedules: null }; }
 };
 
 const therapistColor = (t) => ({
@@ -566,6 +617,25 @@ export default function App() {
 
   const monthKey = `${currentYear}-${currentMonth}`;
 
+  useEffect(() => {
+    loadFromSupabase().then(({ patients: pts, schedules: schs }) => {
+      if (pts && pts.length > 0) {
+        setPatients(pts);
+        saveToStorage("cv_patients", pts);
+      } else {
+        // First load: push local data to Supabase
+        const local = loadFromStorage("cv_patients") || INIT_PATIENTS;
+        syncPatients(local);
+      }
+      if (schs && schs.length > 0) {
+        const schMap = {};
+        schs.forEach(s => { schMap[s.month_key] = s.data; });
+        setMonthlySchedules(schMap);
+        saveToStorage("cv_schedules", schMap);
+      }
+    });
+  }, []);
+
 
 
   const getSchedule = () => {
@@ -584,6 +654,7 @@ export default function App() {
       ...prev, [monthKey]: { ...prev[monthKey], [t]: { ...prev[monthKey][t], [d]: { ...prev[monthKey][t][d], [h]:v } } }
     };
     saveToStorage("cv_schedules", updated);
+    syncSchedule(monthKey, updated[monthKey]);
     return updated;
   });
   const startEdit = (t,d,h) => { setEditingCell(`${t}-${d}-${h}`); setCellValue(schedule[t]?.[d]?.[h]||""); };
@@ -602,6 +673,7 @@ export default function App() {
     setPatients(prev => {
       const updated = [...prev, { ...newPatient, id: Date.now() }];
       saveToStorage("cv_patients", updated);
+      syncPatients(updated);
       return updated;
     });
     setNewPatient({ name:"", therapist:"Laura", status:"evaluacion", notes:"", assigned:"" });
@@ -611,6 +683,7 @@ export default function App() {
     setPatients(prev => {
       const updated = prev.map(p=>p.id===editingPatient.id?editingPatient:p);
       saveToStorage("cv_patients", updated);
+      syncPatients(updated);
       return updated;
     });
     setEditingPatient(null);
@@ -619,6 +692,7 @@ export default function App() {
     setPatients(prev => {
       const updated = prev.filter(p=>p.id!==id);
       saveToStorage("cv_patients", updated);
+      syncPatients(updated);
       return updated;
     });
   };
@@ -941,4 +1015,3 @@ export default function App() {
     </div>
   );
 }
-
