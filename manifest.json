@@ -1,0 +1,17 @@
+{
+  "name": "Casa Verde TO",
+  "short_name": "Casa Verde",
+  "description": "Coordinación de Terapia Ocupacional",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#1E3A2F",
+  "theme_color": "#1E3A2F",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
