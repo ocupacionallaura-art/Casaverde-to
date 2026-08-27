@@ -18,27 +18,27 @@ const MONTHS = ["Enero","Febrero","Marzo","Abril","Mayo","Junio","Julio","Agosto
 const AVAILABILITY = {
   "junio-julio": {
     Karol: {
-      Lunes:     { from:"1pm",  to:"6pm"  },
-      Martes:    { from:"1pm",  to:"6pm"  },
-      Miércoles: { from:"11am", to:"6pm"  },
+      Lunes:     { from:"9am",  to:"6pm"  },
+      Martes:    { from:"9am",  to:"6pm"  },
+      Miércoles: { from:"9am",  to:"6pm"  },
       Jueves:    null,
       Viernes:   { from:"11am", to:"3pm"  },
       Sábados:   null,
     },
     Krissya: {
       Lunes:     null,
-      Martes:    { from:"1pm",  to:"7pm"  },
-      Miércoles: { from:"8am",  to:"7pm",  note:"Mañana: Home two + oficina desde 11am" },
+      Martes:    { from:"8am",  to:"7pm",  note:"8am + 1pm-7pm (mediodía no disponible)" },
+      Miércoles: { from:"8am",  to:"7pm"  },
       Jueves:    null,
-      Viernes:   { from:"10am", to:"12md", note:"Home two 10am-12md" },
+      Viernes:   { from:"9am",  to:"3pm"  },
       Sábados:   null,
     },
     Raquel: {
-      Lunes:     { from:"8am",  to:"6pm"  },
-      Martes:    { from:"10am", to:"6pm"  },
+      Lunes:     { from:"12md", to:"6pm"  },
+      Martes:    { from:"8am",  to:"6pm"  },
       Miércoles: { from:"8am",  to:"6pm"  },
-      Jueves:    { from:"12md", to:"6pm",  note:"Mañana: Británica y Discovery" },
-      Viernes:   { from:"8am",  to:"12md" },
+      Jueves:    { from:"8am",  to:"6pm",  note:"Mañana: Británica y Discovery" },
+      Viernes:   { from:"8am",  to:"3pm"  },
       Sábados:   null,
     },
     Fernanda: {
@@ -47,14 +47,14 @@ const AVAILABILITY = {
       Miércoles: null,
       Jueves:    null,
       Viernes:   null,
-      Sábados:   { from:"8am",  to:"12md" },
+      Sábados:   { from:"8am",  to:"1pm"  },
     },
     Laura: {
       Lunes:     null,
       Martes:    { from:"1pm",  to:"7pm"  },
       Miércoles: { from:"1pm",  to:"6pm"  },
       Jueves:    { from:"10am", to:"7pm"  },
-      Viernes:   { from:"8am",  to:"12md", note:"Coordinación 8-9am, pacientes desde 10am" },
+      Viernes:   { from:"8am",  to:"12md", note:"8am-9am coordinación, pacientes desde 10am" },
       Sábados:   null,
     },
   },
@@ -69,18 +69,18 @@ const AVAILABILITY = {
     },
     Krissya: {
       Lunes:     null,
-      Martes:    { from:"1pm",  to:"7pm"  },
-      Miércoles: { from:"8am",  to:"7pm",  note:"Mañana: Home two + oficina desde 11am" },
+      Martes:    { from:"8am",  to:"7pm",  note:"8am + 1pm-7pm (mediodía no disponible)" },
+      Miércoles: { from:"8am",  to:"7pm"  },
       Jueves:    null,
-      Viernes:   { from:"10am", to:"2pm",  note:"Home two 10am-12md / consultorio 1pm-2pm" },
+      Viernes:   { from:"9am",  to:"3pm"  },
       Sábados:   null,
     },
     Raquel: {
-      Lunes:     { from:"8am",  to:"6pm"  },
-      Martes:    { from:"10am", to:"6pm"  },
+      Lunes:     { from:"12md", to:"6pm"  },
+      Martes:    { from:"8am",  to:"6pm"  },
       Miércoles: { from:"8am",  to:"6pm"  },
-      Jueves:    { from:"12md", to:"6pm",  note:"Mañana: Británica y Discovery" },
-      Viernes:   { from:"8am",  to:"12md" },
+      Jueves:    { from:"8am",  to:"6pm",  note:"Mañana: Británica y Discovery" },
+      Viernes:   { from:"8am",  to:"3pm"  },
       Sábados:   null,
     },
     Fernanda: {
@@ -89,14 +89,14 @@ const AVAILABILITY = {
       Miércoles: null,
       Jueves:    null,
       Viernes:   null,
-      Sábados:   { from:"8am",  to:"12md" },
+      Sábados:   { from:"8am",  to:"1pm"  },
     },
     Laura: {
       Lunes:     null,
       Martes:    { from:"1pm",  to:"7pm"  },
-      Miércoles: { from:"1pm",  to:"7pm"  },
-      Jueves:    { from:"8am",  to:"7pm",  note:"8am coordinación, pacientes desde 10am" },
-      Viernes:   { from:"8am",  to:"12md", note:"8am coordinación" },
+      Miércoles: { from:"1pm",  to:"6pm"  },
+      Jueves:    { from:"10am", to:"7pm"  },
+      Viernes:   { from:"8am",  to:"12md", note:"8am-9am coordinación, pacientes desde 10am" },
       Sábados:   null,
     },
   },
@@ -130,11 +130,23 @@ const getAvailability = (therapist, month) => {
   return AVAILABILITY[period]?.[therapist] || {};
 };
 
+// Horas específicas no disponibles dentro de una franja disponible
+const UNAVAILABLE_HOURS = {
+  Krissya: {
+    Martes: ["9am","10am","11am","12md"],
+  },
+};
+
+const isHourUnavailableException = (therapist, day, hour) => {
+  return UNAVAILABLE_HOURS[therapist]?.[day]?.includes(hour) || false;
+};
+
 const HOUR_INDEX = {"8am":0,"9am":1,"10am":2,"11am":3,"12md":4,"1pm":5,"2pm":6,"3pm":7,"4pm":8,"5pm":9,"6pm":10};
 
 const isHourAvailable = (therapist, day, hour, month) => {
   const avail = getAvailability(therapist, month)[day];
   if (!avail) return false;
+  if (isHourUnavailableException(therapist, day, hour)) return false;
   const from = HOUR_INDEX[avail.from] ?? 0;
   const to   = HOUR_INDEX[avail.to]   ?? 10;
   const h    = HOUR_INDEX[hour]        ?? 0;
@@ -498,7 +510,8 @@ const initSchedule = () => {
   f("Krissya","Martes","2pm","Elena Carvajal (c/15)");
   f("Krissya","Martes","3pm","Felipe Ruiz / Tomás Harrington (c/15)");
   f("Krissya","Martes","4pm","Nicolás Fajardo / Enrique Bonilla");
-  f("Krissya","Martes","5pm","Santiago Gael");
+  f("Krissya","Martes","5pm","🗓 Espacio de evaluación");
+  f("Krissya","Martes","6pm","🗓 Espacio de evaluación");
   // Krissya - Miércoles
   f("Krissya","Miércoles","8am","Home two: Sofía / Matías (c/15) / Franco (semanal) — Valentina y Felipe (por evaluar)");
   f("Krissya","Miércoles","11am","Irene");
@@ -506,7 +519,7 @@ const initSchedule = () => {
   f("Krissya","Miércoles","2pm","Tiago Vargas");
   f("Krissya","Miércoles","3pm","Tomás Harrington (c/15) / Romano (c/15 alternos)");
   f("Krissya","Miércoles","4pm","Sebastián Ríos (c/15) / Gabriel Carvajal (semanal) / Eithan (c/15) / Bruno Capra (c/15)");
-  f("Krissya","Miércoles","5pm","Gonzalo");
+  f("Krissya","Miércoles","5pm","Gonzalo / Santiago Gael");
   f("Krissya","Miércoles","6pm","🗓 Espacio de evaluación");
   // Krissya - Jueves
   f("Krissya","Jueves","5pm","PEERS");
@@ -535,10 +548,11 @@ const initSchedule = () => {
   f("Laura","Martes","6pm","Leonora Calvo");
   // Laura - Miércoles
   f("Laura","Miércoles","1pm","Felipe Stauffer");
+  f("Laura","Miércoles","2pm","Emiliano Salazar");
 
   f("Laura","Miércoles","3pm","Samantha Mora / Elena Pérez");
   f("Laura","Miércoles","4pm","Nicolás Pichardo / Elisa Araús");
-  f("Laura","Miércoles","5pm","Julián García / Julián Komailizadeh / Tomás Vega");
+  f("Laura","Miércoles","5pm","Julián García / Tomás Vega");
   // Laura - Jueves
   f("Laura","Jueves","11am","Kendall Mena");
   f("Laura","Jueves","12md","Gabriel Medrano / Nicolás Acuña (c/15 alternan)");
@@ -546,7 +560,7 @@ const initSchedule = () => {
   f("Laura","Jueves","2pm","Alejandro Alvarado");
   f("Laura","Jueves","3pm","Fabio");
   f("Laura","Jueves","4pm","Nicolás Sarnowski");
-  f("Laura","Jueves","5pm","Mateo Mayorga");
+  f("Laura","Jueves","5pm","Mateo Mayorga / Julián Komailizadeh");
   f("Laura","Jueves","6pm","Nicolás Meneses");
   // Laura - Viernes
   f("Laura","Viernes","8am","Coordinación TO / Eva");
@@ -659,7 +673,13 @@ export default function App() {
   });
   const startEdit = (t,d,h) => { setEditingCell(`${t}-${d}-${h}`); setCellValue(schedule[t]?.[d]?.[h]||""); };
   const commitEdit = (t,d,h) => { updateCell(t,d,h,cellValue); setEditingCell(null); };
-  const countAvailable = (t) => { let c=0; DAYS.forEach(d=>HOURS.forEach(h=>{ if(!schedule[t]?.[d]?.[h]) c++; })); return c; };
+  const countAvailable = (t) => {
+    let c=0;
+    DAYS.forEach(d=>HOURS.forEach(h=>{
+      if(isHourAvailable(t,d,h,currentMonth) && !schedule[t]?.[d]?.[h]) c++;
+    }));
+    return c;
+  };
 
   const filteredPatients = patients.filter(p => {
     const mS = filterStatus==="todos"||p.status===filterStatus;
@@ -801,8 +821,14 @@ export default function App() {
                                 onKeyDown={e=>{if(e.key==="Enter")commitEdit(activeTherapist,d,h);if(e.key==="Escape")setEditingCell(null);}}
                                 style={{ width:"100%", border:"none", background:"#D4ECD8", borderRadius:4, padding:"4px 6px", fontSize:12, outline:`2px solid ${therapistColor(activeTherapist)}`, fontFamily:"inherit" }}/>
                             ):val?(
-                              <div style={{ fontSize:12, lineHeight:1.35, padding:"2px 4px" }}>
-                                {val.includes("c/15")&&<span style={{ display:"inline-block", width:5, height:5, borderRadius:"50%", background:C.accent, marginRight:4, verticalAlign:"middle" }}/>}
+                              <div style={{ fontSize:12, lineHeight:1.35, padding:"2px 4px",
+                                background: val.includes("🗓") ? "#FFF3E0" : "transparent",
+                                borderLeft: val.includes("🗓") ? "3px solid #E8A87C" : "none",
+                                paddingLeft: val.includes("🗓") ? "6px" : "4px",
+                                color: val.includes("🗓") ? "#C97C5D" : "inherit",
+                                fontStyle: val.includes("🗓") ? "italic" : "normal"
+                              }}>
+                                {val.includes("c/15")&&!val.includes("🗓")&&<span style={{ display:"inline-block", width:5, height:5, borderRadius:"50%", background:C.accent, marginRight:4, verticalAlign:"middle" }}/>}
                                 {val}
                               </div>
                             ):unavailable?(
